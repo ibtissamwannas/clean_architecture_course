@@ -20,31 +20,50 @@ class Tea implements Drink {
   double getCost() => 1.5;
 }
 
-class CoffeeWithMilk implements Drink {
+abstract class Addons {
+  String getDescription();
+
+  double getCost();
+}
+
+class Milk implements Addons {
   @override
   String getDescription() => 'Coffee with Milk';
 
   @override
-  double getCost() => 2.0 + 0.5;
+  double getCost() => 0.5;
 }
 
-class CoffeeWithSugar implements Drink {
+class Sugar implements Addons {
   @override
   String getDescription() => 'Coffee with Sugar';
 
   @override
-  double getCost() => 2.0 + 0.3;
+  double getCost() => 0.3;
 }
 
-class CoffeeWithMilkAndSugar implements Drink {
-  @override
-  String getDescription() => 'Coffee with Milk and Sugar';
+class DrinkOrder {
+  final Drink drink;
+  final List<Addons> addons = [];
 
-  @override
-  double getCost() => 2.0 + 0.5 + 0.3;
+  DrinkOrder(this.drink);
+
+  void addAddons(Addons addon) {
+    addons.add(addon);
+  }
+
+  double getCost() {
+    double totalCost = drink.getCost();
+    for (var addon in addons) {
+      totalCost += addon.getCost();
+    }
+    return totalCost;
+  }
 }
 
 void main() {
-  final order1 = CoffeeWithMilkAndSugar();
-  print('${order1.getDescription()}: \$${order1.getCost()}');
+  final drinkOrder = DrinkOrder(Coffee());
+  drinkOrder.addAddons(Milk());
+  drinkOrder.addAddons(Sugar());
+  print('\$${drinkOrder.getCost()}');
 }
