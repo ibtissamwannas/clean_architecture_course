@@ -24,8 +24,8 @@ void processFiles(FileReader reader, List<String> paths) {
 }
 
 void main() {
-  final normalReader = FileReader();
-  final secureReader = SecureFileReader();
+  final FileReader normalReader = FileReader();
+  final FileReader secureReader = SecureFileReader();
 
   final paths = ['/public/data.txt', '/private/secret.txt'];
 

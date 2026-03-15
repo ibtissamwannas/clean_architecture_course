@@ -8,21 +8,30 @@ class Article {
   Article(this.id, this.title, this.content);
 }
 
-abstract class DataSource {
+abstract class Fetchable {
   Future<List<Article>> fetchAll();
 
   Future<Article> fetchById(String id);
+}
 
+abstract class Writable {
   Future<void> create(Article article);
+}
 
+abstract class Updateable {
   Future<void> update(Article article);
+}
 
+abstract class Deleteable {
   Future<void> delete(String id);
+}
 
+abstract class Clearable {
   Future<void> clearAll();
 }
 
-class RemoteApiDataSource implements DataSource {
+class RemoteApiDataSource
+    implements Fetchable, Writable, Updateable, Deleteable {
   @override
   Future<List<Article>> fetchAll() async {
     print('Fetching articles from API...');
@@ -49,14 +58,9 @@ class RemoteApiDataSource implements DataSource {
   Future<void> delete(String id) async {
     print('Deleting article from server...');
   }
-
-  @override
-  Future<void> clearAll() async {
-    throw UnsupportedError('Cannot clear all articles on remote server!');
-  }
 }
 
-class ReadOnlyConfigSource implements DataSource {
+class ReadOnlyConfigSource implements Fetchable {
   final List<Article> _bundledData = [
     Article('1', 'Welcome', 'Welcome to the app'),
     Article('2', 'Tutorial', 'How to use this app'),
@@ -72,29 +76,10 @@ class ReadOnlyConfigSource implements DataSource {
   Future<Article> fetchById(String id) async {
     return _bundledData.firstWhere((a) => a.id == id);
   }
-
-  @override
-  Future<void> create(Article article) async {
-    throw UnsupportedError('Cannot create in read-only source!');
-  }
-
-  @override
-  Future<void> update(Article article) async {
-    throw UnsupportedError('Cannot update read-only source!');
-  }
-
-  @override
-  Future<void> delete(String id) async {
-    throw UnsupportedError('Cannot delete from read-only source!');
-  }
-
-  @override
-  Future<void> clearAll() async {
-    throw UnsupportedError('Cannot clear read-only source!');
-  }
 }
 
-class CacheDataSource implements DataSource {
+class CacheDataSource
+    implements Fetchable, Writable, Updateable, Clearable, Deleteable {
   final Map<String, Article> _cache = {};
 
   @override
@@ -131,43 +116,76 @@ class CacheDataSource implements DataSource {
   }
 }
 
-class ArticleRepository {
-  final DataSource dataSource;
+class ReadonlyReposioty{
+  final Fetchable fetchable;
 
-  ArticleRepository(this.dataSource);
+  ReadonlyReposioty(this.fetchable);
 
   Future<List<Article>> getArticles() async {
-    return await dataSource.fetchAll();
+    return await fetchable.fetchAll();
   }
+
+  Future<Article> getArticleById(String id) async {
+    return await fetchable.fetchById(id);
+  }
+}
+
+class WriteableRepository{
+  final Writable writable;
+
+  WriteableRepository(this.writable);
 
   Future<void> saveArticle(Article article) async {
     try {
-      await dataSource.create(article);
+      await writable.create(article);
     } catch (e) {
       print('This data source does not support saving: $e');
     }
   }
+}
 
-  Future<void> removeArticle(String id) async {
+class UpdateableRepository{
+  final Updateable updateable;
+
+  UpdateableRepository(this.updateable);
+
+  Future<void> updateArticle(Article article) async {
     try {
-      await dataSource.delete(id);
+      await updateable.update(article);
+    } catch (e) {
+      print('This data source does not support updating: $e');
+    }
+  }
+}
+
+class DeleteableRepository{
+  final Deleteable deleteable;
+
+  DeleteableRepository(this.deleteable);
+
+  Future<void> deleteArticle(String id) async {
+    try {
+      await deleteable.delete(id);
     } catch (e) {
       print('This data source does not support deletion: $e');
     }
   }
+}
+
+class ClearableRepository{
+  final Clearable clearable;
+
+  ClearableRepository(this.clearable);
 
   Future<void> clearCache() async {
-    if (dataSource is CacheDataSource) {
-      await dataSource.clearAll();
-    } else {
-      try {
-        await dataSource.clearAll();
-      } catch (e) {
-        print('Clear not supported: $e');
-      }
+    try {
+      await clearable.clearAll();
+    } catch (e) {
+      print('This data source does not support clearing: $e');
     }
   }
 }
+
 
 void main() async {
   var api = RemoteApiDataSource();
@@ -175,8 +193,8 @@ void main() async {
   var cache = CacheDataSource();
 
   var apiRepo = ArticleRepository(api);
-  var configRepo = ArticleRepository(config);
-  var cacheRepo = ArticleRepository(cache);
+  var configRepo = ReadonlyReposioty(config);
+  var cacheRepo = ClearableRepository(cache);
 
   print('=== Testing API Source ===');
   await apiRepo.getArticles();
@@ -185,7 +203,6 @@ void main() async {
 
   print('\n=== Testing Config Source ===');
   await configRepo.getArticles();
-  await configRepo.saveArticle(Article('4', 'Test', 'Data'));
 
   print('\n=== Testing Cache Source ===');
   await cacheRepo.saveArticle(Article('5', 'Cached', 'Item'));

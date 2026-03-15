@@ -3,7 +3,7 @@ abstract class DocumentProcessor {
     if (!validateInput(filePath, content)) {
       return false;
     }
-    print('Processing PDF document...');
+    print('Processing document...');
 
     bool result = convertContent(filePath, content);
 
